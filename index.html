@@ -3,43 +3,152 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Character Gallery</title>
-    <!-- Проверяем, что путь к CSS правильный -->
-    <link rel="stylesheet" href="styles.css">
-    <!-- Подключаем Telegram WebApp Script -->
+    <title>Выбрать персонажа</title>
+    <!-- Подключение Telegram WebApp API (обязательно!) -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Общие стили для Mini App */
+        :root {
+            /* Стили, которые будут переопределены Telegram WebApp при инициализации */
+            --tg-theme-bg-color: #f0f0f0;
+            --tg-theme-text-color: #000000;
+            --tg-theme-hint-color: #888888;
+            --tg-theme-button-color: #5865f2;
+            --tg-theme-button-text-color: #ffffff;
+            --tg-theme-secondary-bg-color: #ffffff;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Основной контейнер без прокрутки */
+        }
+        .header {
+            background-color: var(--tg-theme-secondary-bg-color);
+            padding: 1rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--tg-theme-text-color);
+            margin: 0 0 0.5rem 0;
+        }
+        .filter-container {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .filter-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        .filter-button {
+            background-color: var(--tg-theme-secondary-bg-color);
+            color: var(--tg-theme-hint-color);
+            border: 1px solid var(--tg-theme-hint-color);
+            padding: 0.4rem 0.8rem;
+            border-radius: 9999px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background-color 0.2s, color 0.2s, transform 0.1s;
+            font-size: 0.875rem;
+        }
+        .filter-button:hover {
+            opacity: 0.8;
+        }
+        .filter-button.active {
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            border-color: var(--tg-theme-button-color);
+        }
+        .content-wrapper {
+            flex-grow: 1;
+            padding: 1rem;
+            overflow-y: auto; /* Контейнер для прокрутки */
+        }
+        .characters-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+        }
+        .character-card {
+            background-color: var(--tg-theme-secondary-bg-color);
+            border-radius: 12px;
+            padding: 1rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            position: relative; /* Важно для z-index */
+            z-index: 1; /* Гарантируем, что карточка над фоном */
+        }
+        .character-card:active {
+            transform: scale(0.98);
+        }
+        .emoji {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .info .name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--tg-theme-text-color);
+        }
+        .info .category {
+            font-size: 0.75rem;
+            color: var(--tg-theme-hint-color);
+        }
+        .placeholder-img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-top: 0.5rem;
+            object-fit: cover;
+            opacity: 0; /* Скрываем, пока не настроены */
+        }
+        .no-results {
+            color: var(--tg-theme-hint-color);
+            text-align: center;
+            padding: 2rem;
+            grid-column: 1 / -1;
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <header>
-            <h1>Выберите Персонажа для РП</h1>
-            <p>Нажмите на карточку, чтобы начать диалог.</p>
-        </header>
-
-        <div class="filter-bar">
-            <!-- Кнопки фильтров (создаются динамически или статически) -->
-            <!-- Оставляем только кнопки, чтобы убедиться, что они появятся -->
-            <button class="filter-button active" data-filter="all">Все</button>
-            <button class="filter-button" data-filter="Стримеры">Стримеры</button>
-            <button class="filter-button" data-filter="Аниме">Аниме</button>
-            <button class="filter-button" data-filter="Артисты">Артисты</button>
-            <button class="filter-button" data-filter="Зарубежные">Зарубежные</button> 
+    <div class="header">
+        <h1>Выберите персонажа для РП</h1>
+        <div class="filter-container">
+            <button class="filter-button active" data-filter="all">Все (30)</button>
+            <button class="filter-button" data-filter="Стримеры">Стримеры (4)</button>
+            <button class="filter-button" data-filter="Аниме">Аниме (10)</button>
+            <button class="filter-button" data-filter="Зарубежные">Зарубежные (5)</button>
+            <button class="filter-button" data-filter="Артисты">Артисты (5)</button>
         </div>
-        
-        <div class="content-wrapper">
-            <!-- Здесь будут карточки персонажей -->
-            <div id="characters-container" class="characters-grid">
-                <!-- Карточки загружаются из app.js -->
-                <p style="text-align: center; color: #888;">Если вы видите эту надпись, JavaScript еще не загрузился.</p>
-            </div>
-        </div>
-
-        <footer>
-            <p>&copy; Mini App | Gemini AI</p>
-        </footer>
     </div>
     
-    <!-- КРИТИЧЕСКИ ВАЖНО: Подключаем JavaScript в конце <body> -->
+    <div class="content-wrapper">
+        <div id="characters-container" class="characters-container">
+            <!-- Здесь будут карточки персонажей, сгенерированные JS -->
+        </div>
+    </div>
+
+    <!-- Подключение логики приложения -->
     <script src="app.js"></script>
 </body>
 </html>
