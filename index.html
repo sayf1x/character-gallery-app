@@ -2,122 +2,234 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Character Choice</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Выбор персонажа</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: var(--tg-theme-bg-color, #ffffff);
-            --text-color: var(--tg-theme-text-color, #000000);
-            --hint-color: var(--tg-theme-hint-color, #888888);
-            --btn-color: var(--tg-theme-button-color, #2481cc);
+            --bg-color: var(--tg-theme-bg-color, #181818);
+            --text-color: var(--tg-theme-text-color, #ffffff);
+            --hint-color: var(--tg-theme-hint-color, #a0a0a0);
+            --btn-color: var(--tg-theme-button-color, #3390ec);
             --btn-text: var(--tg-theme-button-text-color, #ffffff);
+            --card-bg: var(--tg-theme-secondary-bg-color, #2b2b2b);
         }
         body {
             background-color: var(--bg-color);
             color: var(--text-color);
-            font-family: sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             margin: 0; padding: 0;
             display: flex; flex-direction: column; height: 100vh;
         }
-        .header {
-            padding: 15px; text-align: center; font-weight: bold;
-            border-bottom: 1px solid #ccc;
+
+        /* НАВИГАЦИЯ (ВКЛАДКИ) */
+        .tabs {
+            display: flex;
+            overflow-x: auto;
+            white-space: nowrap;
+            padding: 10px;
+            background: var(--bg-color);
+            border-bottom: 1px solid var(--card-bg);
+            position: sticky; top: 0; z-index: 100;
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
         }
-        .container {
-            flex: 1; overflow-y: auto; padding: 10px;
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-        }
-        .card {
-            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 10px; padding: 10px;
-            text-align: center; cursor: pointer;
-            border: 2px solid transparent;
+        .tabs::-webkit-scrollbar { display: none; }
+
+        .tab {
+            padding: 8px 16px;
+            margin-right: 8px;
+            border-radius: 20px;
+            background: var(--card-bg);
+            color: var(--hint-color);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid transparent;
             transition: 0.2s;
         }
+        .tab.active {
+            background: var(--btn-color);
+            color: var(--btn-text);
+        }
+
+        /* СПИСОК КАРТОЧЕК */
+        .container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            align-content: start;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px 5px;
+            display: flex; flex-direction: column; align-items: center;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s;
+        }
+        .card:active { transform: scale(0.95); }
         .card.selected {
             border-color: var(--btn-color);
-            background: rgba(36, 129, 204, 0.1);
+            background: rgba(51, 144, 236, 0.15);
         }
-        .emoji { font-size: 40px; }
-        .name { font-weight: bold; margin-top: 5px; font-size: 14px; }
-        
+
+        .emoji { font-size: 32px; margin-bottom: 5px; }
+        .name { font-weight: 500; font-size: 13px; line-height: 1.2; }
+
+        /* ФУТЕР */
         .footer {
-            padding: 15px; background: var(--bg-color);
-            border-top: 1px solid #ccc;
+            padding: 15px;
+            background: var(--bg-color);
+            border-top: 1px solid var(--card-bg);
         }
         #confirmBtn {
-            width: 100%; padding: 12px; border: none; border-radius: 8px;
+            width: 100%; padding: 14px; border: none; border-radius: 12px;
             background-color: var(--btn-color); color: var(--btn-text);
             font-size: 16px; font-weight: bold; cursor: pointer;
             opacity: 0.5; pointer-events: none;
+            transition: opacity 0.2s;
         }
-        #confirmBtn.active {
-            opacity: 1; pointer-events: auto;
-        }
+        #confirmBtn.active { opacity: 1; pointer-events: auto; }
     </style>
 </head>
 <body>
 
-<div class="header">Кого выберешь?</div>
+<!-- Вкладки категорий -->
+<div class="tabs" id="tabsContainer">
+    <div class="tab active" onclick="filter('streamers')">Стримеры</div>
+    <div class="tab" onclick="filter('anime')">Аниме</div>
+    <div class="tab" onclick="filter('foreign')">Зарубежные</div>
+    <div class="tab" onclick="filter('ru_stars')">Наши Звезды</div>
+</div>
 
+<!-- Контейнер для карточек -->
 <div class="container" id="list"></div>
 
+<!-- Кнопка подтверждения -->
 <div class="footer">
     <button id="confirmBtn">Подтвердить</button>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand(); // На весь экран
+    tg.expand();
+    tg.enableClosingConfirmation(); // Спрашивать перед закрытием
 
-    // СПИСОК ПЕРСОНАЖЕЙ (ID должны совпадать с Python!)
+    // ПОЛНЫЙ СПИСОК ПЕРСОНАЖЕЙ
+    // ID должны совпадать с Python кодом!
     const CHARACTERS = [
-        { id: "gensyxa", name: "Генсуха", emoji: "🌸" },
-        { id: "yuuechka", name: "Yuuechka", emoji: "✨" },
-        { id: "evelone", name: "Evelone", emoji: "🎮" },
-        // ... Добавьте остальных сюда
+        // --- СТРИМЕРЫ ---
+        { id: "gensyxa", name: "Генсуха", emoji: "🌸", cat: "streamers" },
+        { id: "yuuechka", name: "Yuuechka", emoji: "✨", cat: "streamers" },
+        { id: "evelone", name: "Evelone", emoji: "🎮", cat: "streamers" },
+        { id: "mokrivskyi", name: "Mokrivskyi", emoji: "🤓", cat: "streamers" },
+        { id: "koryamc", name: "KoryaMC", emoji: "🎧", cat: "streamers" },
+        { id: "morphe_ya", name: "Morphe_ya", emoji: "🧚‍♀️", cat: "streamers" },
+        { id: "sasavot", name: "Sasavot", emoji: "😼", cat: "streamers" },
+        { id: "dangerlyoha", name: "DangerLyoha", emoji: "🕺", cat: "streamers" },
+        { id: "gaechkatm", name: "GaechkaTM", emoji: "🔧", cat: "streamers" },
+
+        // --- АНИМЕ ---
+        { id: "makima", name: "Макима", emoji: "😈", cat: "anime" },
+        { id: "yorforger", name: "Йор Форджер", emoji: "🗡️", cat: "anime" },
+        { id: "zerotwo", name: "Zero Two", emoji: "🦕", cat: "anime" },
+        { id: "asuka", name: "Аска Лэнгли", emoji: "😡", cat: "anime" },
+        { id: "rem", name: "Рем", emoji: "💙", cat: "anime" },
+        { id: "power", name: "Пауэр", emoji: "🩸", cat: "anime" },
+        { id: "mikasa", name: "Микаса", emoji: "🧣", cat: "anime" },
+        { id: "marin", name: "Марин", emoji: "👗", cat: "anime" },
+        { id: "lucy", name: "Люси", emoji: "🌙", cat: "anime" },
+        { id: "holo", name: "Хоро", emoji: "🦊", cat: "anime" },
+
+        // --- ЗАРУБЕЖНЫЕ ЗВЕЗДЫ ---
+        { id: "taylorswift", name: "Taylor Swift", emoji: "🎤", cat: "foreign" },
+        { id: "billieeilish", name: "Billie Eilish", emoji: "💚", cat: "foreign" },
+        { id: "jennaortega", name: "Jenna Ortega", emoji: "🦇", cat: "foreign" },
+        { id: "margotrobbie", name: "Margot Robbie", emoji: "🎀", cat: "foreign" },
+        { id: "arianagrande", name: "Ariana Grande", emoji: "☁️", cat: "foreign" },
+        { id: "zendaya", name: "Zendaya", emoji: "😎", cat: "foreign" },
+        { id: "lanadelrey", name: "Lana Del Rey", emoji: "🚬", cat: "foreign" },
+        { id: "dualipa", name: "Dua Lipa", emoji: "💃", cat: "foreign" },
+        { id: "scarlett", name: "Scarlett", emoji: "🕷️", cat: "foreign" },
+        { id: "meganfox", name: "Megan Fox", emoji: "🔥", cat: "foreign" },
+
+        // --- НАШИ ЗВЕЗДЫ ---
+        { id: "instasamka", name: "Инстасамка", emoji: "💸", cat: "ru_stars" },
+        { id: "klavakoka", name: "Клава Кока", emoji: "👱‍♀️", cat: "ru_stars" },
+        { id: "karnaval", name: "Валя Карнавал", emoji: "🎀", cat: "ru_stars" },
+        { id: "buzova", name: "Ольга Бузова", emoji: "👸", cat: "ru_stars" },
+        { id: "gavrilina", name: "Юля Гаврилина", emoji: "🥺", cat: "ru_stars" },
+        { id: "zivert", name: "Zivert", emoji: "💿", cat: "ru_stars" },
+        { id: "samoylova", name: "Оксана Самойлова", emoji: "👨‍👩‍👧‍👦", cat: "ru_stars" },
+        { id: "dina", name: "Дина Саева", emoji: "🎵", cat: "ru_stars" },
+        { id: "idagalic", name: "Ида Галич", emoji: "🤣", cat: "ru_stars" },
+        { id: "ivleeva", name: "Ивлеева", emoji: "🥂", cat: "ru_stars" },
     ];
 
     let selectedId = null;
     const listEl = document.getElementById('list');
     const btn = document.getElementById('confirmBtn');
+    let currentCat = 'streamers';
 
-    // Рендер карточек
-    CHARACTERS.forEach(char => {
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `<div class="emoji">${char.emoji}</div><div class="name">${char.name}</div>`;
+    // Функция фильтрации и рендера
+    function filter(category) {
+        currentCat = category;
         
-        card.onclick = () => {
-            // Сброс старого выделения
-            document.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
-            // Выделение нового
-            card.classList.add('selected');
-            selectedId = char.id;
-            // Активация кнопки
-            btn.classList.add('active');
-            btn.innerText = `Выбрать: ${char.name}`;
+        // Обновляем вид вкладок
+        document.querySelectorAll('.tab').forEach(t => {
+            t.classList.toggle('active', t.innerText === getCatName(category) || t.getAttribute('onclick').includes(category));
+        });
+
+        render();
+    }
+
+    // Вспомогательная для выделения вкладки (простой хак)
+    function getCatName(cat) {
+        if(cat==='streamers') return 'Стримеры';
+        if(cat==='anime') return 'Аниме';
+        if(cat==='foreign') return 'Зарубежные';
+        if(cat==='ru_stars') return 'Наши Звезды';
+        return '';
+    }
+
+    function render() {
+        listEl.innerHTML = '';
+        const filtered = CHARACTERS.filter(c => c.cat === currentCat);
+        
+        filtered.forEach(char => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            if(char.id === selectedId) card.classList.add('selected');
             
-            // Вибрация (Haptic Feedback) для приятного ощущения
-            if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
-        };
-        
-        listEl.appendChild(card);
-    });
+            card.innerHTML = `<div class="emoji">${char.emoji}</div><div class="name">${char.name}</div>`;
+            
+            card.onclick = () => {
+                selectedId = char.id;
+                render(); // Перерисовать, чтобы обновить выделение
+                btn.classList.add('active');
+                btn.innerText = `Выбрать: ${char.name}`;
+                if(tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+            };
+            listEl.appendChild(card);
+        });
+    }
 
-    // Обработка клика по кнопке
+    // Обработка кнопки
     btn.onclick = () => {
         if (!selectedId) return;
-        
         if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
-        
-        // ГЛАВНОЕ: Отправка данных боту
         tg.sendData(selectedId);
-        
-        // Закрытие приложения (иногда нужно небольшое ожидание, но обычно sendData закрывает сама)
-        // tg.close(); 
     };
+
+    // Первый рендер
+    filter('streamers');
 
 </script>
 </body>
