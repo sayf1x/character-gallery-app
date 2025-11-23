@@ -3,16 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Галерея Персонажей</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Character Gallery</title>
+    <!-- Проверяем, что путь к CSS правильный -->
     <link rel="stylesheet" href="styles.css">
+    <!-- Подключаем Telegram WebApp Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="container">
-        <h1>Выберите персонажа для РП</h1>
-        <div id="character-grid" class="grid-container">
+    <div class="app-container">
+        <header>
+            <h1>Выберите Персонажа для РП</h1>
+            <p>Нажмите на карточку, чтобы начать диалог.</p>
+        </header>
+
+        <div class="filter-bar">
+            <!-- Кнопки фильтров (создаются динамически или статически) -->
+            <!-- Оставляем только кнопки, чтобы убедиться, что они появятся -->
+            <button class="filter-button active" data-filter="all">Все</button>
+            <button class="filter-button" data-filter="Стримеры">Стримеры</button>
+            <button class="filter-button" data-filter="Аниме">Аниме</button>
+            <button class="filter-button" data-filter="Артисты">Артисты</button>
+            <button class="filter-button" data-filter="Зарубежные">Зарубежные</button> 
+        </div>
+        
+        <div class="content-wrapper">
+            <!-- Здесь будут карточки персонажей -->
+            <div id="characters-container" class="characters-grid">
+                <!-- Карточки загружаются из app.js -->
+                <p style="text-align: center; color: #888;">Если вы видите эту надпись, JavaScript еще не загрузился.</p>
             </div>
+        </div>
+
+        <footer>
+            <p>&copy; Mini App | Gemini AI</p>
+        </footer>
     </div>
+    
+    <!-- КРИТИЧЕСКИ ВАЖНО: Подключаем JavaScript в конце <body> -->
     <script src="app.js"></script>
 </body>
 </html>
