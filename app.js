@@ -35,21 +35,24 @@ const CHARACTERS = [
 let currentFilter = 'all';
 
 /**
- * Инициализирует Mini App: скрывает заставку Telegram и запрашивает данные
+ * Главная функция инициализации.
+ * Вызывается при загрузке страницы.
  */
-document.addEventListener('DOMContentLoaded', () => {
-    // Проверка, что Telegram WebApp API доступен
+function initApp() {
+    // 1. Инициализация Telegram WebApp API
     if (window.Telegram && window.Telegram.WebApp) {
-        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.ready(); // Заявляем готовность
         window.Telegram.WebApp.expand(); // Расширяем Mini App на весь экран
         console.log("Telegram WebApp API is ready and expanded.");
     } else {
         console.warn("Telegram WebApp API not found. Running standalone.");
     }
 
+    // 2. Инициализация UI
     renderCharacters(CHARACTERS);
     setupFilterListeners();
-});
+}
+
 
 /**
  * Рендерит список персонажей в зависимости от текущего фильтра.
@@ -57,6 +60,12 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function renderCharacters(list) {
     const container = document.getElementById('characters-container');
+    
+    if (!container) {
+        console.error("Контейнер 'characters-container' не найден в DOM. Проверьте index.html.");
+        return; 
+    }
+    
     container.innerHTML = '';
     const filteredList = list.filter(char => currentFilter === 'all' || char.category === currentFilter);
 
@@ -69,7 +78,7 @@ function renderCharacters(list) {
         const card = document.createElement('div');
         card.className = 'character-card';
         card.setAttribute('data-id', char.id);
-        // Присваиваем обработчик выбора персонажа
+        // ВНИМАНИЕ: Назначаем обработчик нажатия
         card.onclick = () => selectCharacter(char.id);
 
         card.innerHTML = `
@@ -83,7 +92,6 @@ function renderCharacters(list) {
         container.appendChild(card);
     });
     
-    // Плавный скролл к началу списка при смене фильтра
     const scrollContainer = document.querySelector('.content-wrapper');
     if (scrollContainer) {
         scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
@@ -99,13 +107,10 @@ function setupFilterListeners() {
         button.addEventListener('click', () => {
             const category = button.getAttribute('data-filter');
             
-            // Сброс активного класса
             filterButtons.forEach(btn => btn.classList.remove('active'));
             
-            // Установка нового активного класса
             button.classList.add('active');
             
-            // Установка нового фильтра и перерисовка
             currentFilter = category;
             renderCharacters(CHARACTERS);
         });
@@ -113,21 +118,20 @@ function setupFilterListeners() {
 }
 
 /**
- * Обработчик выбора персонажа.
- * КРИТИЧЕСКИ ВАЖНАЯ ФУНКЦИЯ: Отправляет ID персонажа обратно в Telegram Bot.
+ * Обработчик выбора персонажа. Отправляет ID персонажа обратно в Telegram Bot.
  * @param {string} characterId - ID выбранного персонажа.
  */
 function selectCharacter(characterId) {
-    console.log(`Selected character ID: ${characterId}`);
+    console.log(`Attempting to send character ID: ${characterId}`);
     
     if (window.Telegram && window.Telegram.WebApp) {
-        // --- ИСПРАВЛЕНИЕ: Используем sendData для отправки строкового ID ---
+        // КРИТИЧЕСКАЯ СТРОКА: ОТПРАВКА ДАННЫХ И ЗАКРЫТИЕ ПРИЛОЖЕНИЯ
         window.Telegram.WebApp.sendData(characterId); 
-        // ------------------------------------------------------------------
-        // После отправки данных Mini App закроется автоматически,
-        // а бот получит сообщение с этим ID.
+        console.log(`Sent data: ${characterId}`);
     } else {
-        // Предупреждение для режима отладки, если запущено вне Telegram
         alert(`Ошибка: Не удалось найти Telegram WebApp API. Выбран ID: ${characterId}`);
     }
 }
+
+// Запуск приложения после загрузки DOM
+document.addEventListener('DOMContentLoaded', initApp);
